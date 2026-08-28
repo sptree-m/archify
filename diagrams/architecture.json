@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Sample Web App",
+    "quality_profile": "showcase",
+    "visual_preset": "classic"
+  },
+  "components": [
+    { "id": "users", "type": "external", "label": "Users", "pos": [40, 180], "size": [120, 60] },
+    { "id": "web", "type": "frontend", "label": "Web App", "pos": [240, 180], "size": [120, 60] },
+    { "id": "api", "type": "backend", "label": "API", "pos": [440, 180], "size": [120, 60] },
+    { "id": "db", "type": "database", "label": "Database", "pos": [640, 180], "size": [120, 60] }
+  ],
+  "connections": [
+    { "id": "users-web", "from": "users", "to": "web", "label": "HTTPS" },
+    { "id": "web-api", "from": "web", "to": "api", "label": "API" },
+    { "id": "api-db", "from": "api", "to": "db", "label": "SQL" }
+  ]
+}
