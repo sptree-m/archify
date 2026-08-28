@@ -46,11 +46,9 @@
   "connections": [
     { "id": "lv0-use", "from": "lv0-user", "to": "lv0-pc", "label": "use" },
     { "id": "lv0-reset-path", "from": "lv0-pc", "to": "lv0-reset", "label": "終了時初期化", "variant": "security", "fromSide": "bottom", "toSide": "top" },
-    { "id": "lv0-net-path", "from": "lv0-pc", "to": "lv0-net", "label": "通信禁止", "variant": "security", "route": "auto" },
 
     { "id": "lv1-use", "from": "lv1-user", "to": "lv1-pc", "label": "use" },
     { "id": "lv1-store", "from": "lv1-pc", "to": "lv1-storage", "label": "persist", "fromSide": "bottom", "toSide": "top" },
-    { "id": "lv1-net-path", "from": "lv1-pc", "to": "lv1-net", "label": "通信禁止", "variant": "security", "route": "auto" },
 
     { "id": "lv2-use", "from": "lv2-user", "to": "lv2-pc", "label": "use" },
     { "id": "lv2-admin", "from": "lv2-pc", "to": "lv2-policy", "label": "設定保護", "variant": "security", "fromSide": "bottom", "toSide": "top" },
@@ -58,8 +56,7 @@
     { "id": "lv2-approved", "from": "lv2-filter", "to": "lv2-service", "label": "allow only", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "labelAt": [920, 470] },
 
     { "id": "lv3-use", "from": "lv3-user", "to": "lv3-pc", "label": "use" },
-    { "id": "lv3-app-protect", "from": "lv3-pc", "to": "lv3-app", "label": "多重設定保護", "variant": "security", "fromSide": "bottom", "toSide": "top" },
-    { "id": "lv3-network", "from": "lv3-pc", "to": "lv3-internet", "label": "unrestricted", "variant": "emphasis", "route": "auto" }
+    { "id": "lv3-app-protect", "from": "lv3-pc", "to": "lv3-app", "label": "多重設定保護", "variant": "security", "fromSide": "bottom", "toSide": "top" }
   ],
   "cards": [
     { "dot": "rose", "title": "LV0", "items": ["毎回初期化", "データ非保持", "外部ネットワーク完全隔離"] },
