@@ -1,0 +1,138 @@
+name: Archify Diagram
+
+on:
+  workflow_dispatch:
+    inputs:
+      diagram_type:
+        description: Diagram type
+        required: true
+        default: architecture
+        type: choice
+        options:
+          - architecture
+          - workflow
+          - sequence
+          - dataflow
+          - lifecycle
+      input_file:
+        description: JSON input file path
+        required: true
+        default: diagrams/architecture.json
+        type: string
+      quality:
+        description: Validation quality profile
+        required: true
+        default: showcase
+        type: choice
+        options:
+          - standard
+          - showcase
+  push:
+    branches: [main]
+    paths:
+      - 'diagrams/**/*.json'
+      - '.github/workflows/archify-diagram.yml'
+  pull_request:
+    paths:
+      - 'diagrams/**/*.json'
+      - '.github/workflows/archify-diagram.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: archify/package-lock.json
+
+      - name: Install Archify dependencies
+        run: npm ci
+        working-directory: archify
+
+      - name: Resolve diagram inputs
+        id: diagram
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TYPE: ${{ inputs.diagram_type }}
+          INPUT_FILE: ${{ inputs.input_file }}
+          INPUT_QUALITY: ${{ inputs.quality }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            diagram_type="$INPUT_TYPE"
+            input_file="$INPUT_FILE"
+            quality="$INPUT_QUALITY"
+          else
+            # Automatic runs intentionally use a conventional default.
+            # Use workflow_dispatch when a different type or file is needed.
+            diagram_type="architecture"
+            input_file="diagrams/architecture.json"
+            quality="showcase"
+          fi
+
+          case "$diagram_type" in
+            architecture|workflow|sequence|dataflow|lifecycle) ;;
+            *) echo "::error::Unsupported diagram type: $diagram_type"; exit 2 ;;
+          esac
+
+          if [[ ! -f "$input_file" ]]; then
+            echo "::error::Input file not found: $input_file"
+            exit 2
+          fi
+
+          if [[ "$input_file" != *.json ]]; then
+            echo "::error::Input file must end in .json"
+            exit 2
+          fi
+
+          mkdir -p generated
+          base_name="$(basename "$input_file" .json)"
+          output_file="generated/${base_name}.html"
+
+          echo "diagram_type=$diagram_type" >> "$GITHUB_OUTPUT"
+          echo "input_file=$input_file" >> "$GITHUB_OUTPUT"
+          echo "quality=$quality" >> "$GITHUB_OUTPUT"
+          echo "output_file=$output_file" >> "$GITHUB_OUTPUT"
+
+      - name: Validate diagram
+        run: >-
+          node archify/bin/archify.mjs validate
+          "${{ steps.diagram.outputs.diagram_type }}"
+          "${{ steps.diagram.outputs.input_file }}"
+          --quality "${{ steps.diagram.outputs.quality }}"
+          --json
+
+      - name: Render verified HTML
+        run: >-
+          node archify/bin/archify.mjs deliver
+          "${{ steps.diagram.outputs.diagram_type }}"
+          "${{ steps.diagram.outputs.input_file }}"
+          "${{ steps.diagram.outputs.output_file }}"
+          --quality "${{ steps.diagram.outputs.quality }}"
+          --json
+
+      - name: Verify generated artifact
+        run: >-
+          node archify/bin/archify.mjs check
+          "${{ steps.diagram.outputs.output_file }}"
+
+      - name: Upload generated diagram
+        uses: actions/upload-artifact@v4
+        with:
+          name: archify-${{ steps.diagram.outputs.diagram_type }}-${{ github.run_number }}
+          path: ${{ steps.diagram.outputs.output_file }}
+          if-no-files-found: error
+          retention-days: 14
