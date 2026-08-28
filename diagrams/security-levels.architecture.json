@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "PC Security Levels — LV0 to LV3",
+    "subtitle": "段階的に利便性を許可しながら、保護方式を切り替えるセキュリティ構成",
+    "quality_profile": "standard",
+    "visual_preset": "editorial",
+    "viewBox": [1320, 720],
+    "views": [
+      { "id": "lv0", "label": "LV0 — 完全隔離・毎回初期化", "focus": ["lv0-user", "lv0-pc", "lv0-reset", "lv0-net"] },
+      { "id": "lv1", "label": "LV1 — データ保持・完全隔離", "focus": ["lv1-user", "lv1-pc", "lv1-storage", "lv1-net"] },
+      { "id": "lv2", "label": "LV2 — 管理者保護・Allowlist通信", "focus": ["lv2-user", "lv2-pc", "lv2-policy", "lv2-filter", "lv2-service"] },
+      { "id": "lv3", "label": "LV3 — 通信自由・アプリ設定多重保護", "focus": ["lv3-user", "lv3-pc", "lv3-app", "lv3-internet"] }
+    ],
+    "legend": { "mode": "auto" }
+  },
+  "components": [
+    { "id": "lv0-user", "type": "external", "label": "User", "sublabel": "一般ユーザー", "pos": [60, 155], "size": [115, 62] },
+    { "id": "lv0-pc", "type": "frontend", "label": "PC", "sublabel": "作業環境", "pos": [215, 155], "size": [120, 62] },
+    { "id": "lv0-reset", "type": "security", "label": "Session Reset", "sublabel": "終了時に完全初期化", "pos": [215, 270], "size": [150, 66] },
+    { "id": "lv0-net", "type": "security", "label": "Network Block", "sublabel": "外部通信なし", "pos": [215, 390], "size": [150, 66] },
+
+    { "id": "lv1-user", "type": "external", "label": "User", "sublabel": "一般ユーザー", "pos": [375, 155], "size": [115, 62] },
+    { "id": "lv1-pc", "type": "frontend", "label": "PC", "sublabel": "作業環境", "pos": [530, 155], "size": [120, 62] },
+    { "id": "lv1-storage", "type": "database", "label": "Local Data", "sublabel": "データを保持", "pos": [530, 270], "size": [150, 66] },
+    { "id": "lv1-net", "type": "security", "label": "Network Block", "sublabel": "外部通信なし", "pos": [530, 390], "size": [150, 66] },
+
+    { "id": "lv2-user", "type": "external", "label": "User", "sublabel": "設定変更不可", "pos": [690, 155], "size": [120, 62] },
+    { "id": "lv2-pc", "type": "frontend", "label": "PC", "sublabel": "データ保持", "pos": [845, 155], "size": [120, 62] },
+    { "id": "lv2-policy", "type": "security", "label": "Admin Policy", "sublabel": "管理者のみ変更可", "pos": [845, 270], "size": [150, 66] },
+    { "id": "lv2-filter", "type": "security", "label": "Allowlist", "sublabel": "許可先のみ通信", "pos": [845, 390], "size": [150, 66] },
+    { "id": "lv2-service", "type": "cloud", "label": "Approved Services", "sublabel": "Box / Backlog etc.", "pos": [845, 510], "size": [150, 66] },
+
+    { "id": "lv3-user", "type": "external", "label": "User", "sublabel": "一般ユーザー", "pos": [1005, 155], "size": [115, 62] },
+    { "id": "lv3-pc", "type": "frontend", "label": "PC", "sublabel": "通常ネットワーク", "pos": [1160, 155], "size": [120, 62] },
+    { "id": "lv3-app", "type": "security", "label": "Protected App", "sublabel": "設定を2重以上で保護", "pos": [1130, 290], "size": [155, 70] },
+    { "id": "lv3-internet", "type": "external", "label": "Internet", "sublabel": "通信先制限なし", "pos": [1130, 440], "size": [155, 66] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "LV0  最強制約", "wraps": ["lv0-user", "lv0-pc", "lv0-reset", "lv0-net"], "pad": 22 },
+    { "kind": "region", "label": "LV1  保存を許可", "wraps": ["lv1-user", "lv1-pc", "lv1-storage", "lv1-net"], "pad": 22 },
+    { "kind": "region", "label": "LV2  制御通信を許可", "wraps": ["lv2-user", "lv2-pc", "lv2-policy", "lv2-filter", "lv2-service"], "pad": 22 },
+    { "kind": "region", "label": "LV3  通信を許可", "wraps": ["lv3-user", "lv3-pc", "lv3-app", "lv3-internet"], "pad": 22 }
+  ],
+  "connections": [
+    { "id": "lv0-use", "from": "lv0-user", "to": "lv0-pc", "label": "use" },
+    { "id": "lv0-reset-path", "from": "lv0-pc", "to": "lv0-reset", "label": "終了時初期化", "variant": "security", "fromSide": "bottom", "toSide": "top" },
+    { "id": "lv0-net-path", "from": "lv0-pc", "to": "lv0-net", "label": "通信禁止", "variant": "security", "fromSide": "bottom", "toSide": "top", "via": [[305, 245], [290, 245], [290, 390]] },
+
+    { "id": "lv1-use", "from": "lv1-user", "to": "lv1-pc", "label": "use" },
+    { "id": "lv1-store", "from": "lv1-pc", "to": "lv1-storage", "label": "persist", "fromSide": "bottom", "toSide": "top" },
+    { "id": "lv1-net-path", "from": "lv1-pc", "to": "lv1-net", "label": "通信禁止", "variant": "security", "fromSide": "bottom", "toSide": "top", "via": [[620, 245], [605, 245], [605, 390]] },
+
+    { "id": "lv2-use", "from": "lv2-user", "to": "lv2-pc", "label": "use" },
+    { "id": "lv2-admin", "from": "lv2-pc", "to": "lv2-policy", "label": "設定保護", "variant": "security", "fromSide": "bottom", "toSide": "top" },
+    { "id": "lv2-filter-path", "from": "lv2-policy", "to": "lv2-filter", "label": "強制", "variant": "security", "fromSide": "bottom", "toSide": "top" },
+    { "id": "lv2-approved", "from": "lv2-filter", "to": "lv2-service", "label": "allow only", "variant": "emphasis", "fromSide": "bottom", "toSide": "top" },
+
+    { "id": "lv3-use", "from": "lv3-user", "to": "lv3-pc", "label": "use" },
+    { "id": "lv3-app-protect", "from": "lv3-pc", "to": "lv3-app", "label": "多重設定保護", "variant": "security", "fromSide": "bottom", "toSide": "top" },
+    { "id": "lv3-network", "from": "lv3-pc", "to": "lv3-internet", "label": "unrestricted", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "via": [[1220, 245], [1240, 245], [1240, 440]] }
+  ],
+  "cards": [
+    { "dot": "rose", "title": "LV0", "items": ["毎回初期化", "データ非保持", "外部ネットワーク完全隔離"] },
+    { "dot": "violet", "title": "LV1", "items": ["データ保持を許可", "外部ネットワークは引き続き完全隔離"] },
+    { "dot": "amber", "title": "LV2", "items": ["管理者以外は通信設定を変更不可", "Allowlist方式で必要な外部サービスのみ許可"] },
+    { "dot": "cyan", "title": "LV3", "items": ["外部通信の制限なし", "使用アプリケーションの設定を2重以上で保護"] }
+  ]
+}
