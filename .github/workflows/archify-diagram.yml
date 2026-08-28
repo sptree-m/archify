@@ -60,8 +60,7 @@ jobs:
         run: npm ci
         working-directory: archify
 
-      - name: Resolve diagram inputs
-        id: diagram
+      - name: Validate and render diagrams
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
@@ -70,69 +69,64 @@ jobs:
           INPUT_QUALITY: ${{ inputs.quality }}
         run: |
           set -euo pipefail
+          mkdir -p generated
+
+          render_one() {
+            local input_file="$1"
+            local forced_type="${2:-}"
+            local forced_quality="${3:-}"
+
+            if [[ ! -f "$input_file" ]]; then
+              echo "::error::Input file not found: $input_file"
+              exit 2
+            fi
+            if [[ "$input_file" != *.json ]]; then
+              echo "::error::Input file must end in .json: $input_file"
+              exit 2
+            fi
+
+            local diagram_type
+            local quality
+            diagram_type="${forced_type:-$(node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); process.stdout.write(String(d.diagram_type||""));' "$input_file")}"
+            quality="${forced_quality:-$(node -e 'const fs=require("fs"); const d=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); process.stdout.write(String(d.meta?.quality_profile||"standard"));' "$input_file")}"
+
+            case "$diagram_type" in
+              architecture|workflow|sequence|dataflow|lifecycle) ;;
+              *) echo "::error::Unsupported diagram type '$diagram_type' in $input_file"; exit 2 ;;
+            esac
+            case "$quality" in
+              standard|showcase) ;;
+              *) echo "::error::Unsupported quality '$quality' in $input_file"; exit 2 ;;
+            esac
+
+            local relative="${input_file#diagrams/}"
+            local stem="${relative%.json}"
+            local output_file="generated/${stem}.html"
+            mkdir -p "$(dirname "$output_file")"
+
+            echo "Rendering $input_file -> $output_file ($diagram_type / $quality)"
+            node archify/bin/archify.mjs validate "$diagram_type" "$input_file" --quality "$quality" --json
+            node archify/bin/archify.mjs deliver "$diagram_type" "$input_file" "$output_file" --quality "$quality" --json
+            node archify/bin/archify.mjs check "$output_file"
+          }
 
           if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
-            diagram_type="$INPUT_TYPE"
-            input_file="$INPUT_FILE"
-            quality="$INPUT_QUALITY"
+            render_one "$INPUT_FILE" "$INPUT_TYPE" "$INPUT_QUALITY"
           else
-            # Automatic runs intentionally use a conventional default.
-            # Use workflow_dispatch when a different type or file is needed.
-            diagram_type="architecture"
-            input_file="diagrams/architecture.json"
-            quality="showcase"
+            mapfile -t files < <(find diagrams -type f -name '*.json' -print | sort)
+            if [[ ${#files[@]} -eq 0 ]]; then
+              echo '::error::No diagram JSON files found under diagrams/'
+              exit 2
+            fi
+            for file in "${files[@]}"; do
+              render_one "$file"
+            done
           fi
 
-          case "$diagram_type" in
-            architecture|workflow|sequence|dataflow|lifecycle) ;;
-            *) echo "::error::Unsupported diagram type: $diagram_type"; exit 2 ;;
-          esac
-
-          if [[ ! -f "$input_file" ]]; then
-            echo "::error::Input file not found: $input_file"
-            exit 2
-          fi
-
-          if [[ "$input_file" != *.json ]]; then
-            echo "::error::Input file must end in .json"
-            exit 2
-          fi
-
-          mkdir -p generated
-          base_name="$(basename "$input_file" .json)"
-          output_file="generated/${base_name}.html"
-
-          echo "diagram_type=$diagram_type" >> "$GITHUB_OUTPUT"
-          echo "input_file=$input_file" >> "$GITHUB_OUTPUT"
-          echo "quality=$quality" >> "$GITHUB_OUTPUT"
-          echo "output_file=$output_file" >> "$GITHUB_OUTPUT"
-
-      - name: Validate diagram
-        run: >-
-          node archify/bin/archify.mjs validate
-          "${{ steps.diagram.outputs.diagram_type }}"
-          "${{ steps.diagram.outputs.input_file }}"
-          --quality "${{ steps.diagram.outputs.quality }}"
-          --json
-
-      - name: Render verified HTML
-        run: >-
-          node archify/bin/archify.mjs deliver
-          "${{ steps.diagram.outputs.diagram_type }}"
-          "${{ steps.diagram.outputs.input_file }}"
-          "${{ steps.diagram.outputs.output_file }}"
-          --quality "${{ steps.diagram.outputs.quality }}"
-          --json
-
-      - name: Verify generated artifact
-        run: >-
-          node archify/bin/archify.mjs check
-          "${{ steps.diagram.outputs.output_file }}"
-
-      - name: Upload generated diagram
+      - name: Upload generated diagrams
         uses: actions/upload-artifact@v4
         with:
-          name: archify-${{ steps.diagram.outputs.diagram_type }}-${{ github.run_number }}
-          path: ${{ steps.diagram.outputs.output_file }}
+          name: archify-diagrams-${{ github.run_number }}
+          path: generated/**/*.html
           if-no-files-found: error
           retention-days: 14
