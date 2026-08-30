@@ -17,14 +17,11 @@
 // sizes (architecture sublabels are 9px, the rest are 7px).
 
 import { textUnits } from './utils.mjs';
+import { resolveFontProfile } from './font-profile.mjs';
 
-// widthFactor: px of advance width per text unit, per px of font size.
-// horizontalPadding: total px reserved inside the box so text never touches
-// the border.
-export const nodeTextFit = {
-  widthFactor: 0.6,
-  horizontalPadding: 8,
-};
+export const nodeTextFit = Object.freeze({
+  ...resolveFontProfile(),
+});
 
 // Largest font size at or below `preferred` that fits `text` inside `width`,
 // floored at `minimum` — below that the text is no longer legible and the
